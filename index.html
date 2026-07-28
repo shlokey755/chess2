@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shrinking Chess ♟️📉</title>
+    <style>
+        :root {
+            --board-size: 8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121212;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+            color: #ff4757;
+        }
+
+        #hud {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            background: #1e1e1e;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(var(--board-size), 60px);
+            grid-template-rows: repeat(var(--board-size), 60px);
+            gap: 2px;
+            background: #333;
+            padding: 4px;
+            border-radius: 6px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: all 0.5s ease;
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }
+
+        .light { background: #f0d9b5; color: #000; }
+        .dark { background: #b58863; color: #000; }
+        .selected { background: #7b61ff !important; }
+    </style>
+</head>
+<body>
+
+    <h1>Shrinking Chess ♟️📉</h1>
+    <div id="hud">Turn: <span id="turn">White</span> | Moves until shrink: <span id="countdown">8</span> | Size: <span id="size">8x8</span></div>
+    
+    <div id="board"></div>
+
+    <script>
+        const initialBoard = [
+            ["♜","♞","♝","♛","♚","♝","♞","♜"],
+            ["♟","♟","♟","♟","♟","♟","♟","♟"],
+            ["","","","","","","",""],
+            ["","","","","","","",""],
+            ["","","","","","","",""],
+            ["","","","","","","",""],
+            ["♙","♙","♙","♙","♙","♙","♙","♙"],
+            ["♖","♘","♗","♕","♔","♗","♘","♖"]
+        ];
+
+        let board = JSON.parse(JSON.stringify(initialBoard));
+        let offset = 0; // Tracks outer layers removed
+        let turn = 'White'; // White or Black
+        let halfMoves = 0;
+        let selectedSquare = null;
+
+        const symbols = {
+            'r':'♜','n':'♞','b':'♝','q':'♛','k':'♚','p':'♟',
+            'R':'♖','N':'♘','B':'♗','Q':'♕','K':'♔','P':'♙'
+        };
+
+        function renderBoard() {
+            const currentSize = 8 - (offset * 2);
+            document.documentElement.style.setProperty('--board-size', currentSize);
+            document.getElementById('turn').innerText = turn;
+            document.getElementById('countdown').innerText = 8 - (halfMoves % 8);
+            document.getElementById('size').innerText = `${currentSize}x${currentSize}`;
+
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            for (let r = offset; r < 8 - offset; r++) {
+                for (let c = offset; c < 8 - offset; c++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.row = r;
+                    square.dataset.col = c;
+                    
+                    if (selectedSquare && selectedSquare.r === r && selectedSquare.c === c) {
+                        square.classList.add('selected');
+                    }
+
+                    square.innerText = board[r][c];
+                    square.addEventListener('click', () => handleSquareClick(r, c));
+                    boardEl.appendChild(square);
+                }
+            }
+        }
+
+        function handleSquareClick(r, c) {
+            if (!selectedSquare) {
+                if (board[r][c] !== "") {
+                    selectedSquare = { r, c };
+                    renderBoard();
+                }
+            } else {
+                // Move piece
+                board[r][c] = board[selectedSquare.r][selectedSquare.c];
+                board[selectedSquare.r][selectedSquare.c] = "";
+                selectedSquare = null;
+                
+                halfMoves++;
+                turn = turn === 'White' ? 'Black' : 'White';
+
+                if (halfMoves % 8 === 0 && (8 - (offset * 2)) > 2) {
+                    shrinkBoard();
+                }
+
+                renderBoard();
+            }
+        }
+
+        function shrinkBoard() {
+            alert("⚠️ THE BOARD IS SHRINKING! Outer perimeter destroyed into the void!");
+            offset++;
+        }
+
+        renderBoard();
+    </script>
+</body>
+</html>
