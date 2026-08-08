@@ -3,309 +3,655 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shrinking Chess ♟️📉</title>
+    <title>Shrinking Chess</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #121212;
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
             color: #e0e0e0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            margin: 0;
+            padding: 1rem;
+        }
+
+        .container {
+            text-align: center;
         }
 
         h1 {
-            margin-bottom: 5px;
-            color: #ff4757;
+            margin-bottom: 0.5rem;
+            color: #ff6b6b;
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 1.5rem;
         }
 
         #hud {
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-            background: #1e1e1e;
-            padding: 8px 16px;
+            margin-bottom: 1.5rem;
+            background: #1a1f3a;
+            padding: 12px 24px;
             border-radius: 8px;
             border: 1px solid #333;
             text-align: center;
+            font-size: 14px;
+        }
+
+        #hud div {
+            margin: 6px 0;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        #hud span {
+            background: #2d3561;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        #status {
+            font-size: 13px;
+            color: #ffa500;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        .board-wrapper {
+            position: relative;
+            margin-bottom: 2rem;
         }
 
         #board {
             display: grid;
-            grid-template-columns: repeat(8, 60px);
-            grid-template-rows: repeat(8, 60px);
-            gap: 2px;
-            background: #333;
-            padding: 4px;
-            border-radius: 6px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            grid-template-columns: repeat(8, 56px);
+            grid-template-rows: repeat(8, 56px);
+            gap: 0;
+            background: #000;
+            border: 3px solid #444;
+            border-radius: 4px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
 
         .square {
-            width: 60px;
-            height: 60px;
+            width: 56px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 28px;
             cursor: pointer;
             user-select: none;
-            transition: background 0.2s;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+            font-weight: bold;
         }
 
-        .light { background: #f0d9b5; color: #000; }
-        .dark { background: #b58863; color: #000; }
-        .selected { background: #7b61ff !important; }
-        .highlight { background: #2ed573 !important; }
-        
+        .light { 
+            background: #f0d9b5; 
+            color: #000; 
+        }
+
+        .dark { 
+            background: #b58863; 
+            color: #000; 
+        }
+
+        .square:hover:not(.void):not(.highlight) { 
+            box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.1);
+        }
+
+        .selected { 
+            background: #a64dff !important;
+            box-shadow: inset 0 0 0 2px #fff !important;
+            border: 2px solid #fff !important;
+        }
+
+        .highlight { 
+            background: #2ed573 !important;
+            box-shadow: inset 0 0 8px rgba(46, 213, 115, 0.4);
+            border: 1px solid #1ab64d !important;
+        }
+
+        .highlight::after {
+            content: '●';
+            position: absolute;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
         .void {
-            background: #222 !important;
+            background: #1a1a1a !important;
             cursor: not-allowed;
-            color: #444;
+            color: #333;
+            box-shadow: inset 0 0 0 1px #222;
+        }
+
+        .void::before {
+            content: '⛔';
+            font-size: 20px;
+            opacity: 0.3;
+        }
+
+        #log {
+            background: #1a1f3a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 12px;
+            max-width: 456px;
+            max-height: 140px;
+            overflow-y: auto;
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        .log-entry {
+            margin: 4px 0;
+            padding: 2px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry.capture {
+            color: #ff6b6b;
+        }
+
+        .log-entry.shrink {
+            color: #ffa500;
+            font-weight: bold;
+        }
+
+        .log-entry.game-over {
+            color: #2ed573;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #333;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #444;
+            border-color: #777;
+        }
+
+        button:active {
+            background: #555;
+        }
+
+        #log::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #log::-webkit-scrollbar-track {
+            background: #1a1f3a;
+        }
+
+        #log::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 3px;
+        }
+
+        #log::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        @media (max-width: 600px) {
+            #board {
+                grid-template-columns: repeat(8, 40px);
+                grid-template-rows: repeat(8, 40px);
+            }
+
+            .square {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>⚔ SHRINKING CHESS</h1>
+        <div class="subtitle">2-Player | Board Shrinks Every 8 Moves</div>
+        
+        <div id="hud">
+            <div>
+                <span id="turn">WHITE'S TURN</span>
+                <span id="countdown">Moves until shrink: 8</span>
+                <span id="boardsize">Board: 8×8</span>
+            </div>
+            <div id="status">Game in progress...</div>
+        </div>
 
-    <h1>Shrinking Chess ♟️📉</h1>
-    <div id="hud">
-        Turn: <span id="turn">White</span> | Moves until shrink: <span id="countdown">8</span><br>
-        <span id="status" style="font-size: 0.9rem; color: #aaa;">Game in progress...</span>
+        <div class="board-wrapper">
+            <div id="board"></div>
+        </div>
+
+        <div id="log"></div>
+
+        <div class="controls">
+            <button onclick="resetGame()">New Game</button>
+        </div>
     </div>
-    
-    <div id="board"></div>
 
     <script>
-        let board = [
-            ["♜","♞","♝","♛","♚","♝","♞","♜"],
-            ["♟","♟","♟","♟","♟","♟","♟","♟"],
-            ["","","","","","","",""],
-            ["","","","","","","",""],
-            ["","","","","","","",""],
-            ["","","","","","","",""],
-            ["♙","♙","♙","♙","♙","♙","♙","♙"],
-            ["♖","♘","♗","♕","♔","♗","♘","♖"]
-        ];
+        const Game = {
+            board: null,
+            voidMask: null,
+            turn: 'WHITE',
+            halfMoves: 0,
+            selectedSquare: null,
+            validMoves: [],
+            gameOver: false,
+            shrinkLayer: 0,
+            log: ['Game started! White moves first.'],
 
-        let voidMask = Array(8).fill(false).map(() => Array(8).fill(false));
-        let turn = 'White'; // White or Black
-        let halfMoves = 0;
-        let selectedSquare = null;
-        let validMoves = [];
+            init() {
+                this.board = [
+                    ["♜","♞","♝","♛","♚","♝","♞","♜"],
+                    ["♟","♟","♟","♟","♟","♟","♟","♟"],
+                    ["","","","","","","",""],
+                    ["","","","","","","",""],
+                    ["","","","","","","",""],
+                    ["","","","","","","",""],
+                    ["♙","♙","♙","♙","♙","♙","♙","♙"],
+                    ["♖","♘","♗","♕","♔","♗","♘","♖"]
+                ];
+                this.voidMask = Array(8).fill(false).map(() => Array(8).fill(false));
+                this.turn = 'WHITE';
+                this.halfMoves = 0;
+                this.selectedSquare = null;
+                this.validMoves = [];
+                this.gameOver = false;
+                this.shrinkLayer = 0;
+                this.log = ['Game started! White moves first.'];
+                this.render();
+            },
 
-        function isWhitePiece(piece) {
-            return "♙♖♘♗♕♔".includes(piece);
-        }
+            isWhitePiece(piece) {
+                return "♙♖♘♗♕♔".includes(piece);
+            },
 
-        function isBlackPiece(piece) {
-            return "♟♜♞♝♛♚".includes(piece);
-        }
+            isBlackPiece(piece) {
+                return "♟♜♞♝♛♚".includes(piece);
+            },
 
-        function renderBoard() {
-            document.getElementById('turn').innerText = turn;
-            document.getElementById('countdown').innerText = 8 - (halfMoves % 8);
+            getPieceName(piece) {
+                const names = {
+                    '♙': 'P', '♟': 'P',
+                    '♖': 'R', '♜': 'R',
+                    '♘': 'N', '♞': 'N',
+                    '♗': 'B', '♝': 'B',
+                    '♕': 'Q', '♛': 'Q',
+                    '♔': 'K', '♚': 'K'
+                };
+                return names[piece] || '?';
+            },
 
-            const boardEl = document.getElementById('board');
-            boardEl.innerHTML = '';
+            getNotation(r, c) {
+                const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+                return files[c] + ranks[r];
+            },
 
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const square = document.createElement('div');
-                    square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                    
-                    if (voidMask[r][c]) {
-                        square.classList.add('void');
-                        square.innerText = "";
-                    } else {
-                        if (selectedSquare && selectedSquare.r === r && selectedSquare.c === c) {
-                            square.classList.add('selected');
-                        } else if (validMoves.some(m => m.r === r && m.c === c)) {
-                            square.classList.add('highlight');
-                        }
-                        square.innerText = board[r][c];
-                        square.addEventListener('click', () => handleSquareClick(r, c));
+            isPathClear(r1, c1, r2, c2, piece) {
+                const type = piece.toLowerCase();
+                if (type === 'n') return true; // Knights jump
+
+                const dr = r2 === r1 ? 0 : (r2 > r1 ? 1 : -1);
+                const dc = c2 === c1 ? 0 : (c2 > c1 ? 1 : -1);
+
+                let r = r1 + dr;
+                let c = c1 + dc;
+
+                while (r !== r2 || c !== c2) {
+                    if (this.board[r][c] !== '' || this.voidMask[r][c]) {
+                        return false;
                     }
-                    boardEl.appendChild(square);
+                    r += dr;
+                    c += dc;
                 }
-            }
-        }
 
-        function getPotentialMoves(r, c, piece) {
-            let moves = [];
-            let isWhite = isWhitePiece(piece);
-            let type = piece.toLowerCase();
+                return true;
+            },
 
-            function addStepMoves(directions) {
-                for (let [dr, dc] of directions) {
-                    let nr = r + dr, nc = c + dc;
-                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !voidMask[nr][nc]) {
-                        let target = board[nr][nc];
-                        if (target === "") {
-                            moves.push({r: nr, c: nc});
-                        } else {
-                            if (isWhite !== isWhitePiece(target)) {
-                                moves.push({r: nr, c: nc});
+            getPotentialMoves(r, c, piece) {
+                const moves = [];
+                const isWhite = this.isWhitePiece(piece);
+                const type = piece.toLowerCase();
+
+                const addLineMoves = (directions) => {
+                    for (const [dr, dc] of directions) {
+                        for (let i = 1; i < 8; i++) {
+                            const nr = r + dr * i;
+                            const nc = c + dc * i;
+
+                            if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8 || this.voidMask[nr][nc]) break;
+
+                            const target = this.board[nr][nc];
+                            if (target === '') {
+                                moves.push({ r: nr, c: nc });
+                            } else {
+                                if (isWhite !== this.isWhitePiece(target)) {
+                                    moves.push({ r: nr, c: nc });
+                                }
+                                break;
                             }
-                            break;
+                        }
+                    }
+                };
+
+                if (type === 'p') {
+                    const dir = isWhite ? -1 : 1;
+                    const startRow = isWhite ? 6 : 1;
+
+                    // Forward move
+                    if (r + dir >= 0 && r + dir < 8 && !this.voidMask[r + dir][c] && this.board[r + dir][c] === '') {
+                        moves.push({ r: r + dir, c });
+
+                        // Double move from start
+                        if (r === startRow && !this.voidMask[r + 2 * dir][c] && this.board[r + 2 * dir][c] === '') {
+                            moves.push({ r: r + 2 * dir, c });
+                        }
+                    }
+
+                    // Captures
+                    for (const dc of [-1, 1]) {
+                        const nr = r + dir, nc = c + dc;
+                        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !this.voidMask[nr][nc]) {
+                            const target = this.board[nr][nc];
+                            if (target !== '' && isWhite !== this.isWhitePiece(target)) {
+                                moves.push({ r: nr, c: nc });
+                            }
+                        }
+                    }
+                } else if (type === 'n') {
+                    const jumps = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+                    for (const [dr, dc] of jumps) {
+                        const nr = r + dr, nc = c + dc;
+                        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !this.voidMask[nr][nc]) {
+                            const target = this.board[nr][nc];
+                            if (target === '' || isWhite !== this.isWhitePiece(target)) {
+                                moves.push({ r: nr, c: nc });
+                            }
+                        }
+                    }
+                } else if (type === 'b') {
+                    addLineMoves([[-1,-1],[-1,1],[1,-1],[1,1]]);
+                } else if (type === 'r') {
+                    addLineMoves([[-1,0],[1,0],[0,-1],[0,1]]);
+                } else if (type === 'q') {
+                    addLineMoves([[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]);
+                } else if (type === 'k') {
+                    const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+                    for (const [dr, dc] of dirs) {
+                        const nr = r + dr, nc = c + dc;
+                        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !this.voidMask[nr][nc]) {
+                            const target = this.board[nr][nc];
+                            if (target === '' || isWhite !== this.isWhitePiece(target)) {
+                                moves.push({ r: nr, c: nc });
+                            }
                         }
                     }
                 }
-            }
 
-            if (type === 'p') {
-                let dir = isWhite ? -1 : 1;
-                let startRow = isWhite ? 6 : 1;
-                // Forward step
-                if (r + dir >= 0 && r + dir < 8 && !voidMask[r + dir][c] && board[r + dir][c] === "") {
-                    moves.push({r: r + dir, c});
-                    // Double step
-                    if (r === startRow && !voidMask[r + 2 * dir][c] && board[r + 2 * dir][c] === "") {
-                        moves.push({r: r + 2 * dir, c});
-                    }
-                }
-                // Captures
-                for (let dc of [-1, 1]) {
-                    let nr = r + dir, nc = c + dc;
-                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !voidMask[nr][nc]) {
-                        let target = board[nr][nc];
-                        if (target !== "" && isWhite !== isWhitePiece(target)) {
-                            moves.push({r: nr, c: nc});
-                        }
-                    }
-                }
-            } else if (type === 'n') {
-                let knightMoves = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
-                for (let [dr, dc] of knightMoves) {
-                    let nr = r + dr, nc = c + dc;
-                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !voidMask[nr][nc]) {
-                        let target = board[nr][nc];
-                        if (target === "" || isWhite !== isWhitePiece(target)) {
-                            moves.push({r: nr, c: nc});
-                        }
-                    }
-                }
-            } else if (type === 'b' || type === 'q') {
-                addStepMoves([[-1,-1],[-1,1],[1,-1],[1,1]]);
-            }
-            if (type === 'r' || type === 'q') {
-                addStepMoves([[-1,0],[1,0],[0,-1],[0,1]]);
-            }
-            if (type === 'k') {
-                let kingMoves = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-                for (let [dr, dc] of kingMoves) {
-                    let nr = r + dr, nc = c + dc;
-                    if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && !voidMask[nr][nc]) {
-                        let target = board[nr][nc];
-                        if (target === "" || isWhite !== isWhitePiece(target)) {
-                            moves.push({r: nr, c: nc});
-                        }
-                    }
-                }
-            }
-            return moves;
-        }
+                return moves.filter(m => !this.voidMask[m.r][m.c]);
+            },
 
-        function handleSquareClick(r, c) {
-            if (voidMask[r][c]) return;
+            handleSquareClick(r, c) {
+                if (this.gameOver || this.voidMask[r][c]) return;
 
-            if (!selectedSquare) {
-                let piece = board[r][c];
-                if (piece !== "" && ((turn === 'White' && isWhitePiece(piece)) || (turn === 'Black' && isBlackPiece(piece)))) {
-                    selectedSquare = { r, c };
-                    validMoves = getPotentialMoves(r, c, piece);
-                    renderBoard();
-                }
-            } else {
-                let clickedValid = validMoves.find(m => m.r === r && m.c === c);
-                if (clickedValid) {
-                    // Execute Move
-                    board[r][c] = board[selectedSquare.r][selectedSquare.c];
-                    board[selectedSquare.r][selectedSquare.c] = "";
-                    selectedSquare = null;
-                    validMoves = [];
-                    
-                    halfMoves++;
-                    turn = turn === 'White' ? 'Black' : 'White';
+                if (!this.selectedSquare) {
+                    const piece = this.board[r][c];
+                    const canMove = (this.turn === 'WHITE' && this.isWhitePiece(piece)) ||
+                                   (this.turn === 'BLACK' && this.isBlackPiece(piece));
 
-                    if (halfMoves % 8 === 0) {
-                        triggerSmartShrink();
+                    if (piece !== '' && canMove) {
+                        this.selectedSquare = { r, c };
+                        this.validMoves = this.getPotentialMoves(r, c, piece);
+                        this.render();
                     }
-
-                    renderBoard();
                 } else {
-                    // Re-select or deselect
-                    selectedSquare = null;
-                    validMoves = [];
-                    renderBoard();
-                    handleSquareClick(r, c);
+                    const clickedValid = this.validMoves.find(m => m.r === r && m.c === c);
+                    if (clickedValid) {
+                        this.executeMove(this.selectedSquare.r, this.selectedSquare.c, r, c);
+                    } else {
+                        this.selectedSquare = null;
+                        this.validMoves = [];
+                        this.render();
+                        this.handleSquareClick(r, c);
+                    }
                 }
-            }
-        }
+            },
 
-        function triggerSmartShrink() {
-            // Find King positions
-            let whiteKingRow = -1, blackKingRow = -1;
-            let whiteKingCol = -1, blackKingCol = -1;
+            executeMove(fromR, fromC, toR, toC) {
+                const piece = this.board[fromR][fromC];
+                const captured = this.board[toR][toC];
+                const fromNotation = this.getNotation(fromR, fromC);
+                const toNotation = this.getNotation(toR, toC);
+                const pieceName = this.getPieceName(piece);
 
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    if (board[r][c] === '♔') { whiteKingRow = r; whiteKingCol = c; }
-                    if (board[r][c] === '♚') { blackKingRow = r; blackKingCol = c; }
+                // Execute move
+                this.board[toR][toC] = piece;
+                this.board[fromR][fromC] = '';
+
+                // Log
+                if (captured) {
+                    const capturedName = this.getPieceName(captured);
+                    this.addLog(`${pieceName} captures ${capturedName} on ${toNotation}`, 'capture');
+
+                    // Check if king was captured
+                    if (captured === '♔' || captured === '♚') {
+                        this.gameOver = true;
+                        const winner = this.turn === 'WHITE' ? 'BLACK' : 'WHITE';
+                        this.addLog(`🎉 ${winner} WINS! King captured!`, 'game-over');
+                    }
+                } else {
+                    this.addLog(`${pieceName} to ${toNotation}`);
                 }
-            }
 
-            // Determine safe shrinking rows/cols without violating king constraints
-            let availableRows = [];
-            for (let r = 0; r < 8; r++) {
-                if (r !== whiteKingRow && r !== blackKingRow && !voidMask[r].every(v => v)) {
-                    availableRows.push(r);
+                this.selectedSquare = null;
+                this.validMoves = [];
+                this.halfMoves++;
+                this.turn = this.turn === 'WHITE' ? 'BLACK' : 'WHITE';
+
+                if (this.halfMoves % 8 === 0) {
+                    this.shrinkBoard();
                 }
-            }
 
-            let shrunk = false;
-            // Shrink outer edge rows first if allowed
-            for (let r of [0, 7, 1, 6, 2, 5, 3, 4]) {
-                if (!voidMask[r].every(v => v) && r !== whiteKingRow && r !== blackKingRow) {
+                this.render();
+            },
+
+            shrinkBoard() {
+                let removed = 0;
+
+                // Shrink from outer edges inward
+                for (let i = 0; i < 4; i++) {
+                    if (this.shrinkLayer !== i) continue;
+
+                    // Mark rows
+                    if (removed === 0) {
+                        for (let c = 0; c < 8; c++) {
+                            if (!this.voidMask[i][c]) {
+                                if (this.board[i][c] !== '') {
+                                    const piece = this.board[i][c];
+                                    this.addLog(`${this.getPieceName(piece)} at ${this.getNotation(i, c)} consumed by void!`, 'shrink');
+                                }
+                                this.voidMask[i][c] = true;
+                                removed++;
+                            }
+                        }
+                    }
+
+                    if (removed === 0) {
+                        for (let c = 0; c < 8; c++) {
+                            const r = 7 - i;
+                            if (!this.voidMask[r][c]) {
+                                if (this.board[r][c] !== '') {
+                                    const piece = this.board[r][c];
+                                    this.addLog(`${this.getPieceName(piece)} at ${this.getNotation(r, c)} consumed by void!`, 'shrink');
+                                }
+                                this.voidMask[r][c] = true;
+                                removed++;
+                            }
+                        }
+                    }
+
+                    if (removed === 0) {
+                        for (let r = i; r < 8 - i; r++) {
+                            if (!this.voidMask[r][i]) {
+                                if (this.board[r][i] !== '') {
+                                    const piece = this.board[r][i];
+                                    this.addLog(`${this.getPieceName(piece)} at ${this.getNotation(r, i)} consumed by void!`, 'shrink');
+                                }
+                                this.voidMask[r][i] = true;
+                                removed++;
+                            }
+                        }
+                    }
+
+                    if (removed === 0) {
+                        for (let r = i; r < 8 - i; r++) {
+                            const c = 7 - i;
+                            if (!this.voidMask[r][c]) {
+                                if (this.board[r][c] !== '') {
+                                    const piece = this.board[r][c];
+                                    this.addLog(`${this.getPieceName(piece)} at ${this.getNotation(r, c)} consumed by void!`, 'shrink');
+                                }
+                                this.voidMask[r][c] = true;
+                                removed++;
+                            }
+                        }
+                    }
+                }
+
+                if (removed > 0) {
+                    this.shrinkLayer++;
+                    this.addLog(`Board shrank! Layer ${this.shrinkLayer} consumed.`, 'shrink');
+                }
+
+                // Check if kings survived
+                let whiteKing = false, blackKing = false;
+                for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
-                        if (board[r][c] !== "") {
-                            board[r][c] = ""; // Void capture
-                        }
-                        voidMask[r][c] = true;
-                    }
-                    shrunk = true;
-                    break;
-                }
-            }
-
-            // If rows are locked due to kings, try columns
-            if (!shrunk) {
-                for (let c of [0, 7, 1, 6, 2, 5, 3, 4]) {
-                    let colSafe = true;
-                    for (let r = 0; r < 8; r++) {
-                        if ((r === whiteKingRow && c === whiteKingCol) || (r === blackKingRow && c === blackKingCol)) {
-                            colSafe = false;
-                            break;
-                        }
-                    }
-                    if (colSafe) {
-                        for (let r = 0; r < 8; r++) {
-                            if (board[r][c] !== "") board[r][c] = "";
-                            voidMask[r][c] = true;
-                        }
-                        shrunk = true;
-                        break;
+                        if (this.board[r][c] === '♔') whiteKing = true;
+                        if (this.board[r][c] === '♚') blackKing = true;
                     }
                 }
-            }
 
-            if (shrunk) {
-                document.getElementById('status').innerText = "⚠️ Board section collapsed into the void! Kings protected.";
+                if (!whiteKing) {
+                    this.gameOver = true;
+                    this.addLog('🎉 BLACK WINS! White King consumed by void!', 'game-over');
+                } else if (!blackKing) {
+                    this.gameOver = true;
+                    this.addLog('🎉 WHITE WINS! Black King consumed by void!', 'game-over');
+                }
+            },
+
+            addLog(msg, type = 'normal') {
+                this.log.push(msg);
+                if (this.log.length > 12) this.log.shift();
+            },
+
+            render() {
+                this.renderBoard();
+                this.renderHUD();
+                this.renderLog();
+            },
+
+            renderBoard() {
+                const boardEl = document.getElementById('board');
+                boardEl.innerHTML = '';
+
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const square = document.createElement('div');
+                        const isLight = (r + c) % 2 === 0;
+                        square.className = `square ${isLight ? 'light' : 'dark'}`;
+
+                        if (this.voidMask[r][c]) {
+                            square.classList.add('void');
+                        } else {
+                            if (this.selectedSquare?.r === r && this.selectedSquare?.c === c) {
+                                square.classList.add('selected');
+                            } else if (this.validMoves.some(m => m.r === r && m.c === c)) {
+                                square.classList.add('highlight');
+                            }
+
+                            square.textContent = this.board[r][c];
+                            square.addEventListener('click', () => this.handleSquareClick(r, c));
+                        }
+
+                        boardEl.appendChild(square);
+                    }
+                }
+            },
+
+            renderHUD() {
+                document.getElementById('turn').textContent = this.turn + "'S TURN";
+                document.getElementById('countdown').textContent = `Moves until shrink: ${8 - (this.halfMoves % 8)}`;
+                document.getElementById('boardsize').textContent = `Layer: ${this.shrinkLayer}/4`;
+
+                if (this.gameOver) {
+                    document.getElementById('status').textContent = '🏁 GAME OVER';
+                } else {
+                    document.getElementById('status').textContent = 'Game in progress...';
+                }
+            },
+
+            renderLog() {
+                const logEl = document.getElementById('log');
+                logEl.innerHTML = this.log.map(msg => {
+                    let className = 'log-entry';
+                    if (msg.includes('capture')) className += ' capture';
+                    if (msg.includes('shrink') || msg.includes('void') || msg.includes('Layer')) className += ' shrink';
+                    if (msg.includes('WINS')) className += ' game-over';
+                    return `<div class="${className}">${msg}</div>`;
+                }).join('');
+                logEl.scrollTop = logEl.scrollHeight;
             }
+        };
+
+        function resetGame() {
+            Game.init();
         }
 
-        renderBoard();
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            Game.init();
+        });
     </script>
 </body>
 </html>
